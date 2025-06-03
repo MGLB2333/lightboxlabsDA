@@ -10,6 +10,11 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import PlaceIcon from '@mui/icons-material/Place';
+import LiveTvIcon from '@mui/icons-material/LiveTv';
+import DownloadIcon from '@mui/icons-material/Download';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Tooltip from '@mui/material/Tooltip';
 import { useAudienceBuilder } from '../AudienceBuilderContext.jsx';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -125,6 +130,24 @@ const TV_REGIONS = [
 // Generate random density score between 0 and 100
 const getRandomDensityScore = () => Math.floor(Math.random() * 101);
 
+const mockLinearSpots = [
+  { channel: 'Channel 4', programme: 'Coronation Street', timeBand: 'Peak', indexScore: 158, impressions: '68,201' },
+  { channel: 'Channel 4', programme: 'Top Gear', timeBand: 'Daytime', indexScore: 157, impressions: '107,617' },
+  { channel: 'ITV1', programme: 'A League of Their Own', timeBand: 'Daytime', indexScore: 155, impressions: '83,406' },
+  { channel: 'ITV2', programme: 'The Big Bang Theory', timeBand: 'Early Peak', indexScore: 154, impressions: '53,441' },
+  { channel: 'E4', programme: 'Animal Rescue Live', timeBand: 'Early Peak', indexScore: 153, impressions: '46,773' },
+  { channel: 'Dave', programme: "Britain's Got Talent", timeBand: 'Late Peak', indexScore: 153, impressions: '43,228' },
+  { channel: 'Channel 5', programme: 'Location, Location, Location', timeBand: 'Early Evening', indexScore: 153, impressions: '85,377' },
+  { channel: 'ITV2', programme: 'The One Show', timeBand: 'Peak', indexScore: 147, impressions: '21,178' },
+  { channel: 'E4', programme: 'Modern Family', timeBand: 'Early Peak', indexScore: 145, impressions: '105,705' },
+  { channel: 'Sky One', programme: 'Escape to the Country', timeBand: 'Peak', indexScore: 142, impressions: '28,992' },
+  { channel: 'More4', programme: 'The Great British Bake Off', timeBand: 'Early Evening', indexScore: 139, impressions: '42,011' },
+  { channel: 'Sky Max', programme: 'The Supervet', timeBand: 'Daytime', indexScore: 138, impressions: '62,023' },
+  { channel: 'Channel 5', programme: 'Homes Under the Hammer', timeBand: 'Peak', indexScore: 138, impressions: '116,082' },
+  { channel: 'Channel 4', programme: 'Come Dine With Me', timeBand: 'Early Evening', indexScore: 119, impressions: '85,208' },
+  { channel: 'Dave', programme: 'Strictly Come Dancing', timeBand: 'Peak', indexScore: 117, impressions: '42,312' },
+];
+
 const AudienceStep4 = () => {
   const ctx = useAudienceBuilder();
   const theme = useTheme();
@@ -159,7 +182,10 @@ const AudienceStep4 = () => {
   const [redHexes, setRedHexes] = useState([]);
   // New state variables
   const [selectedAudiences, setSelectedAudiences] = useState(['primary', 'secondary']);
-  const [audienceLogic, setAudienceLogic] = useState('and');
+  const [audienceLogic, setAudienceLogic] = useState('or');
+  const [insightTab, setInsightTab] = useState('location');
+  const [selectedSpots, setSelectedSpots] = useState([]);
+  const allChecked = selectedSpots.length === mockLinearSpots.length;
 
   const handleAddLayerClick = (event) => {
     setPoiAnchorEl(event.currentTarget);
@@ -268,350 +294,590 @@ const AudienceStep4 = () => {
     return base;
   };
 
+  const handleSelectAllSpots = (e) => {
+    if (e.target.checked) {
+      setSelectedSpots(mockLinearSpots.map((_, idx) => idx));
+    } else {
+      setSelectedSpots([]);
+    }
+  };
+
+  const handleSelectSpot = (idx) => {
+    setSelectedSpots((prev) =>
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  };
+
   return (
-    <Box sx={{ height: '100%', display: 'grid', gridTemplateColumns: '320px 1fr', gridTemplateRows: '1fr', width: '100%' }}>
-      {/* Left column with tabs */}
-      <Box sx={{ gridColumn: 1, gridRow: 1, width: 320, minWidth: 320, maxWidth: 320, borderRight: `1px solid #e0e0e0`, pr: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', height: '100%', zIndex: 2, background: '#fff', overflowY: 'auto' }}>
-        {/* Tabs */}
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          variant="fullWidth"
-          sx={{ mb: 0, minHeight: 28, height: 28, width: '100%', justifyContent: 'center', borderBottom: '1px solid #e0e0e0' }}
-          TabIndicatorProps={{
-            style: {
-              background: '#009fe3',
-              height: 3,
-              borderRadius: 2,
-            }
+    <Box sx={{ height: '100%', width: '100%' }}>
+      {/* Top-level insight tabs above everything */}
+      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', borderBottom: '1px solid #e0e0e0', mb: 0 }}>
+        <ToggleButtonGroup
+          value={insightTab}
+          exclusive
+          onChange={(_, v) => v && setInsightTab(v)}
+          sx={{
+            alignSelf: 'flex-start',
+            maxWidth: 380,
+            height: 36,
+            borderRadius: 2,
+            boxShadow: 'none',
+            minWidth: 0,
           }}
         >
-          <Tab label="POI" value="POI" sx={{ fontSize: 11, minHeight: 28, height: 28, px: 0.5, py: 0, m: 0, flex: 1, textTransform: 'none' }} />
-          <Tab label="Locations" value="GEO" sx={{ fontSize: 12, minHeight: 28, height: 28, px: 0.5, py: 0, m: 0, flex: 1, textTransform: 'none' }} />
-          <Tab label="Battlegrounds" value="BATTLEGROUND" sx={{ fontSize: 12, minHeight: 28, height: 28, px: 0.5, py: 0, m: 0, flex: 1, textTransform: 'none' }} />
-        </Tabs>
-        {/* Margin below tabs where search bar was */}
-        <Box sx={{ height: 12 }} />
-        {/* POI Tab: Add Layer and POI Cards */}
-        {tab === 'POI' && (
-          <Box sx={{ width: '90%', mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAddLayerClick}
-              sx={{ my: 2, textTransform: 'none', fontWeight: 600, borderRadius: 2, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1976d2', background: '#e3f0fa' }, width: '100%' }}
-            >
-              Add Layer
-            </Button>
-            {layers.filter(layer => !layer.type).map((layer, idx) => (
-              <Card key={idx} sx={{ display: 'flex', alignItems: 'center', p: 1, boxShadow: 'none', borderLeft: 0, borderRight: 0, borderTop: 0, borderBottom: '1px solid #e0e0e0', borderRadius: 0, width: '100%', minHeight: 48, position: 'relative' }}>
-                <Avatar sx={{ bgcolor: 'transparent', width: 20, height: 20, mr: 1.5 }}>
-                  <RoomIcon sx={{ color: layer.color, fontSize: 22 }} />
-                </Avatar>
-                <Box sx={{ flex: 1, textAlign: 'left' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.1 }}>{layer.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">{layer.stores} Stores</Typography>
-                </Box>
-                <IconButton size="small" onClick={() => handleRemoveLayer(idx)} sx={{ ml: 1, position: 'absolute', right: 8, top: 8 }}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Card>
-            ))}
-          </Box>
-        )}
-        {/* Locations Tab: Add Layer, Type dropdown, TV region dropdown */}
-        {tab === 'GEO' && (
-          <Box sx={{ width: '90%', mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAddLayerClick}
-              sx={{ my: 2, textTransform: 'none', fontWeight: 600, borderRadius: 2, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1976d2', background: '#e3f0fa' }, width: '100%' }}
-            >
-              Add Layer
-            </Button>
-            {layers.filter(layer => layer.type).map((layer, idx) => (
-              <Card key={idx} sx={{ display: 'flex', alignItems: 'center', p: 1, boxShadow: 'none', borderLeft: 0, borderRight: 0, borderTop: 0, borderBottom: '1px solid #e0e0e0', borderRadius: 0, width: '100%', minHeight: 48, position: 'relative' }}>
-                <Box sx={{ flex: 1, textAlign: 'left' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.1 }}>{layer.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">{layer.type}</Typography>
-                </Box>
-                <IconButton size="small" onClick={() => handleRemoveLayer(idx)} sx={{ ml: 1, position: 'absolute', right: 8, top: 8 }}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Card>
-            ))}
-          </Box>
-        )}
-        {/* Add Layer Menu */}
-        <Menu
-          anchorEl={poiAnchorEl}
-          open={Boolean(poiAnchorEl)}
-          onClose={handlePoiMenuClose}
-          PaperProps={{
-            sx: {
-              width: '90%',
-              maxWidth: 280,
-              bgcolor: '#f7f7f7',
-              p: 2,
-              borderRadius: 1,
-              mt: 0.5,
-            }
-          }}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'center',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'center',
-          }}
-        >
-          {tab === 'POI' ? (
-            <>
-              <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={category}
-                  label="Category"
-                  onChange={e => setCategory(e.target.value)}
+          <ToggleButton value="location" sx={{
+            textTransform: 'none',
+            fontWeight: 400,
+            fontSize: 13,
+            px: 2,
+            py: 0.5,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            bgcolor: insightTab === 'location' ? '#f5faff' : 'transparent',
+            color: 'text.primary',
+            '&.Mui-selected': {
+              bgcolor: '#f5faff',
+              color: 'primary.main',
+            },
+            '&:hover': {
+              bgcolor: '#f5faff',
+            },
+            border: 'none',
+            boxShadow: 'none',
+          }}>
+            <PlaceIcon sx={{ fontSize: 16, mr: 0.5 }} /> Location Insight
+          </ToggleButton>
+          <ToggleButton value="tv" sx={{
+            textTransform: 'none',
+            fontWeight: 400,
+            fontSize: 13,
+            px: 2,
+            py: 0.5,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            bgcolor: insightTab === 'tv' ? '#f5faff' : 'transparent',
+            color: 'text.primary',
+            '&.Mui-selected': {
+              bgcolor: '#f5faff',
+              color: 'primary.main',
+            },
+            '&:hover': {
+              bgcolor: '#f5faff',
+            },
+            border: 'none',
+            boxShadow: 'none',
+          }}>
+            <LiveTvIcon sx={{ fontSize: 16, mr: 0.5 }} /> TV Spot Insight
+          </ToggleButton>
+        </ToggleButtonGroup>
+        <Box sx={{ flex: 1 }} />
+      </Box>
+      <Box sx={{ height: 8 }} />
+      {insightTab === 'location' ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: '320px 1fr', gridTemplateRows: '1fr', width: '100%', height: '100%' }}>
+          {/* Left column with insight tabs and then POI tabs */}
+          <Box sx={{ gridColumn: 1, gridRow: 1, width: 320, minWidth: 320, maxWidth: 320, borderRight: `1px solid #e0e0e0`, pr: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', height: '100%', zIndex: 2, background: '#fff', overflowY: 'auto' }}>
+            {/* Show location insight (current) or TV spot insight */}
+            {insightTab === 'location' ? (
+              <>
+                {/* Tabs */}
+                <Tabs
+                  value={tab}
+                  onChange={(_, v) => setTab(v)}
+                  variant="fullWidth"
+                  sx={{ mb: 0, minHeight: 28, height: 28, width: '100%', justifyContent: 'center', borderBottom: '1px solid #e0e0e0' }}
+                  TabIndicatorProps={{
+                    style: {
+                      background: '#009fe3',
+                      height: 3,
+                      borderRadius: 2,
+                    }
+                  }}
                 >
-                  {CATEGORY_OPTIONS.map(opt => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
-                <InputLabel>Name</InputLabel>
-                <Select
-                  value={name}
-                  label="Name"
-                  onChange={e => setName(e.target.value)}
-                >
-                  {NAME_OPTIONS.map(opt => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                onClick={() => {
-                  handleAddLayer();
-                  handlePoiMenuClose();
-                }}
-                sx={{ width: '100%', textTransform: 'none' }}
-              >
-                Add
-              </Button>
-            </>
-          ) : (
-            <>
-              <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
-                <InputLabel>Type</InputLabel>
-                <Select
-                  value={locationType}
-                  label="Type"
-                  onChange={e => setLocationType(e.target.value)}
-                >
-                  <MenuItem value="TV region">TV region</MenuItem>
-                  <MenuItem value="City">City</MenuItem>
-                </Select>
-              </FormControl>
-              {locationType === 'TV region' && (
-                <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
-                  <InputLabel>TV Region</InputLabel>
-                  <Select
-                    value={selectedRegion}
-                    label="TV Region"
-                    onChange={e => setSelectedRegion(e.target.value)}
-                  >
-                    {TV_REGIONS.map(region => (
-                      <MenuItem key={region} value={region}>{region}</MenuItem>
+                  <Tab label="POI" value="POI" sx={{ fontSize: 11, minHeight: 28, height: 28, px: 0.5, py: 0, m: 0, flex: 1, textTransform: 'none' }} />
+                  <Tab label="Locations" value="GEO" sx={{ fontSize: 12, minHeight: 28, height: 28, px: 0.5, py: 0, m: 0, flex: 1, textTransform: 'none' }} />
+                  <Tab label="Battlegrounds" value="BATTLEGROUND" sx={{ fontSize: 12, minHeight: 28, height: 28, px: 0.5, py: 0, m: 0, flex: 1, textTransform: 'none' }} />
+                </Tabs>
+                {/* Margin below tabs where search bar was */}
+                <Box sx={{ height: 12 }} />
+                {/* POI Tab: Add Layer and POI Cards */}
+                {tab === 'POI' && (
+                  <Box sx={{ width: '90%', mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddLayerClick}
+                      sx={{ my: 2, textTransform: 'none', fontWeight: 600, borderRadius: 2, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1976d2', background: '#e3f0fa' }, width: '100%' }}
+                    >
+                      Add Layer
+                    </Button>
+                    {layers.filter(layer => !layer.type).map((layer, idx) => (
+                      <Card key={idx} sx={{ display: 'flex', alignItems: 'center', p: 1, boxShadow: 'none', borderLeft: 0, borderRight: 0, borderTop: 0, borderBottom: '1px solid #e0e0e0', borderRadius: 0, width: '100%', minHeight: 48, position: 'relative' }}>
+                        <Avatar sx={{ bgcolor: 'transparent', width: 20, height: 20, mr: 1.5 }}>
+                          <RoomIcon sx={{ color: layer.color, fontSize: 22 }} />
+                        </Avatar>
+                        <Box sx={{ flex: 1, textAlign: 'left' }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.1 }}>{layer.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">{layer.stores} Stores</Typography>
+                        </Box>
+                        <IconButton size="small" onClick={() => handleRemoveLayer(idx)} sx={{ ml: 1, position: 'absolute', right: 8, top: 8 }}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Card>
                     ))}
-                  </Select>
-                </FormControl>
-              )}
-              <Button
-                variant="contained"
-                onClick={() => {
-                  handleAddLocation();
-                  handlePoiMenuClose();
-                }}
-                sx={{ width: '100%', textTransform: 'none' }}
-              >
-                Add
-              </Button>
-            </>
-          )}
-        </Menu>
-        {/* Battlegrounds Tab: List battlegrounds, no popup */}
-        {tab === 'BATTLEGROUND' && (
-          <Box sx={{ width: '90%', mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => setBattlegroundDialogOpen(true)}
-              sx={{ my: 2, textTransform: 'none', fontWeight: 600, borderRadius: 2, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1976d2', background: '#e3f0fa' }, width: '100%' }}
-            >
-              Define Battleground
-            </Button>
-            {/* Only show the card if battlegroundCard is set */}
-            {battlegroundCard && (
-              <Card sx={{ boxShadow: 'none', borderTop: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', borderLeft: 0, borderRight: 0, borderRadius: 0, width: '100%', mt: 2, p: 2, display: 'flex', flexDirection: 'row', alignItems: 'flex-start', position: 'relative' }}>
-                {/* Red hex icon */}
-                <Box sx={{ display: 'flex', alignItems: 'center', pr: 2, pt: 0.5 }}>
-                  <svg width={28} height={28} viewBox="0 0 28 28">
-                    <polygon points="14,3 25,10 25,21 14,27 3,21 3,10" fill="#E53935" stroke="#B71C1C" strokeWidth={1.5} opacity={0.7} />
-                  </svg>
+                  </Box>
+                )}
+                {/* Locations Tab: Add Layer, Type dropdown, TV region dropdown */}
+                {tab === 'GEO' && (
+                  <Box sx={{ width: '90%', mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddLayerClick}
+                      sx={{ my: 2, textTransform: 'none', fontWeight: 600, borderRadius: 2, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1976d2', background: '#e3f0fa' }, width: '100%' }}
+                    >
+                      Add Layer
+                    </Button>
+                    {layers.filter(layer => layer.type).map((layer, idx) => (
+                      <Card key={idx} sx={{ display: 'flex', alignItems: 'center', p: 1, boxShadow: 'none', borderLeft: 0, borderRight: 0, borderTop: 0, borderBottom: '1px solid #e0e0e0', borderRadius: 0, width: '100%', minHeight: 48, position: 'relative' }}>
+                        <Box sx={{ flex: 1, textAlign: 'left' }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.1 }}>{layer.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">{layer.type}</Typography>
+                        </Box>
+                        <IconButton size="small" onClick={() => handleRemoveLayer(idx)} sx={{ ml: 1, position: 'absolute', right: 8, top: 8 }}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+                {/* Add Layer Menu */}
+                <Menu
+                  anchorEl={poiAnchorEl}
+                  open={Boolean(poiAnchorEl)}
+                  onClose={handlePoiMenuClose}
+                  PaperProps={{
+                    sx: {
+                      width: '90%',
+                      maxWidth: 280,
+                      bgcolor: '#f7f7f7',
+                      p: 2,
+                      borderRadius: 1,
+                      mt: 0.5,
+                    }
+                  }}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'center',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'center',
+                  }}
+                >
+                  {tab === 'POI' ? (
+                    <>
+                      <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
+                        <InputLabel>Category</InputLabel>
+                        <Select
+                          value={category}
+                          label="Category"
+                          onChange={e => setCategory(e.target.value)}
+                        >
+                          {CATEGORY_OPTIONS.map(opt => (
+                            <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
+                        <InputLabel>Name</InputLabel>
+                        <Select
+                          value={name}
+                          label="Name"
+                          onChange={e => setName(e.target.value)}
+                        >
+                          {NAME_OPTIONS.map(opt => (
+                            <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          handleAddLayer();
+                          handlePoiMenuClose();
+                        }}
+                        sx={{ width: '100%', textTransform: 'none' }}
+                      >
+                        Add
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
+                        <InputLabel>Type</InputLabel>
+                        <Select
+                          value={locationType}
+                          label="Type"
+                          onChange={e => setLocationType(e.target.value)}
+                        >
+                          <MenuItem value="TV region">TV region</MenuItem>
+                          <MenuItem value="City">City</MenuItem>
+                        </Select>
+                      </FormControl>
+                      {locationType === 'TV region' && (
+                        <FormControl fullWidth size="small" sx={{ mb: 2, bgcolor: 'white', borderRadius: 1 }}>
+                          <InputLabel>TV Region</InputLabel>
+                          <Select
+                            value={selectedRegion}
+                            label="TV Region"
+                            onChange={e => setSelectedRegion(e.target.value)}
+                          >
+                            {TV_REGIONS.map(region => (
+                              <MenuItem key={region} value={region}>{region}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      )}
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          handleAddLocation();
+                          handlePoiMenuClose();
+                        }}
+                        sx={{ width: '100%', textTransform: 'none' }}
+                      >
+                        Add
+                      </Button>
+                    </>
+                  )}
+                </Menu>
+                {/* Battlegrounds Tab: List battlegrounds, no popup */}
+                {tab === 'BATTLEGROUND' && (
+                  <Box sx={{ width: '90%', mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={() => setBattlegroundDialogOpen(true)}
+                      sx={{ my: 2, textTransform: 'none', fontWeight: 600, borderRadius: 2, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1976d2', background: '#e3f0fa' }, width: '100%' }}
+                    >
+                      Define Battleground
+                    </Button>
+                    {/* Only show the card if battlegroundCard is set */}
+                    {battlegroundCard && (
+                      <Card sx={{ boxShadow: 'none', borderTop: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', borderLeft: 0, borderRight: 0, borderRadius: 0, width: '100%', mt: 2, p: 2, display: 'flex', flexDirection: 'row', alignItems: 'flex-start', position: 'relative' }}>
+                        {/* Red hex icon */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', pr: 2, pt: 0.5 }}>
+                          <svg width={28} height={28} viewBox="0 0 28 28">
+                            <polygon points="14,3 25,10 25,21 14,27 3,21 3,10" fill="#E53935" stroke="#B71C1C" strokeWidth={1.5} opacity={0.7} />
+                          </svg>
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Battlegrounds</Typography>
+                            <IconButton size="small" onClick={() => setBattlegroundCard(null)} sx={{ ml: 1 }}>
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>Zone Type:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 500, textTransform: 'capitalize' }}>
+                              {battlegroundCard.zoneType === 'postcode' ? 'Postcode District' : 'Hex Grid (H3)'}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>Score:</Typography>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{battlegroundCard.score}</Typography>
+                          </Box>
+                        </Box>
+                      </Card>
+                    )}
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box sx={{ width: '100%', px: 0, pt: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 18 }}>Top TV Spots</Typography>
+                  </Box>
+                  <Box>
+                    <button
+                      style={{
+                        background: '#fff',
+                        color: '#009fe3',
+                        border: '1px solid #009fe3',
+                        borderRadius: 4,
+                        padding: '4px 14px',
+                        fontWeight: 500,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: 'none',
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      <DownloadIcon sx={{ fontSize: 17, mr: 1 }} /> Export TV plan
+                    </button>
+                  </Box>
                 </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: 15, flex: 1 }}>Battlegrounds</Typography>
-                    <IconButton size="small" onClick={() => setBattlegroundCard(null)} sx={{ ml: 1 }}>
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>Zone Type:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, textTransform: 'capitalize' }}>
-                      {battlegroundCard.zoneType === 'postcode' ? 'Postcode District' : 'Hex Grid (H3)'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>Score:</Typography>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{battlegroundCard.score}</Typography>
-                  </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 14 }}>
+                    These are the TV spots that over-index with your selected audience.
+                  </Typography>
+                  <Tooltip title={"We combine ACR and panel viewership data to identify TV spots that over-index with your selected audience. To export a CSV of the plan, select the spots you want and click 'Export'."} placement="right" arrow>
+                    <InfoOutlinedIcon sx={{ color: '#bdbdbd', fontSize: 18, cursor: 'pointer', mt: 0.1 }} />
+                  </Tooltip>
                 </Box>
-              </Card>
+                <Box sx={{ width: '100%' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 6, overflow: 'hidden' }}>
+                    <thead>
+                      <tr style={{ background: '#f7f7fa', fontWeight: 600 }}>
+                        <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', width: 36 }}>
+                          <input type="checkbox" checked={allChecked} onChange={handleSelectAllSpots} style={{ cursor: 'pointer', accentColor: '#009fe3' }} />
+                        </th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Channel</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Programme</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Time Band</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Index</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Impressions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mockLinearSpots.map((row, idx) => (
+                        <tr key={idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f7f7fa' }}>
+                          <td style={{ padding: '7px 8px', borderBottom: '1px solid #f0f0f0', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedSpots.includes(idx)}
+                              onChange={() => handleSelectSpot(idx)}
+                              style={{ cursor: 'pointer', accentColor: '#009fe3' }}
+                            />
+                          </td>
+                          <td style={{ padding: '7px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.channel}</td>
+                          <td style={{ padding: '7px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.programme}</td>
+                          <td style={{ padding: '7px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.timeBand}</td>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', borderBottom: '1px solid #f0f0f0', fontWeight: 600, fontSize: 13 }}>{row.indexScore}</td>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.impressions}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
+              </Box>
             )}
           </Box>
-        )}
-      </Box>
-      {/* Right column: map full width, audience size box top left, smaller */}
-      <Box sx={{ gridColumn: 2, gridRow: 1, minWidth: 0, height: 600, width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', m: 0, p: 0, zIndex: 1 }}>
-        {/* Static image map background */}
-        <img
-          src="/mapzoom.png"
-          alt="Map Zoom"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
-        />
-        {/* POI pins */}
-        {tab === 'POI' && mapType === 'POI' && layers.map((layer, lidx) =>
-          layer.type === 'TV region' ? null : layer.pins.map((pin, pidx) => (
-            <RoomIcon
-              key={lidx + '-' + pidx}
-              sx={{
-                color: layer.color,
-                position: 'absolute',
-                left: `${pin.x}%`,
-                top: `${pin.y}%`,
-                fontSize: 22,
-                zIndex: 2,
-                transform: 'translate(-50%, -100%)',
-                pointerEvents: 'none',
-                opacity: 0.85,
-              }}
+          {/* Right column: map full width, audience size box top left, smaller */}
+          <Box sx={{ gridColumn: 2, gridRow: 1, minWidth: 0, height: 600, width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', m: 0, p: 0, zIndex: 1 }}>
+            {/* Static image map background changes based on audience selection */}
+            <img
+              src={
+                selectedAudiences.length === 2
+                  ? (audienceLogic === 'and' ? '/mapsecondary.png' : '/mapboth.png')
+                  : selectedAudiences[0] === 'primary'
+                    ? '/mapprimary.png'
+                    : '/mapsecondary.png'
+              }
+              alt="Map"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
             />
-          ))
-        )}
-        {/* Red hexes for battlegrounds */}
-        {battlegroundCard && redHexes.map((hex, idx) => (
-          <svg
-            key={idx}
-            width={96}
-            height={96}
-            viewBox="0 0 96 96"
-            style={{
-              position: 'absolute',
-              left: `${hex.x}%`,
-              top: `${hex.y}%`,
-              transform: 'translate(-50%, -50%)',
-              zIndex: 3,
-              pointerEvents: 'none'
-            }}
-          >
-            <polygon
-              points="48,12 84,36 84,72 48,96 12,72 12,36"
-              fill="#E53935"
-              stroke="#B71C1C"
-              strokeWidth={4}
-              opacity={0.45}
-            />
-          </svg>
-        ))}
-        {/* Audience size box top right */}
-        <Box sx={{ position: 'absolute', right: 20, top: 12, bgcolor: '#fff', border: '1px solid #bdbdbd', borderRadius: 1, p: 1.5, minWidth: 200, boxShadow: 1, zIndex: 10 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: 10 }}>Audience Size:</Typography>
-            <Typography variant="body2" fontWeight={700} sx={{ color: 'text.primary', fontSize: 13 }}>{calculateTotalAudience().toLocaleString()}</Typography>
-            <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
-              <KeyboardArrowDownIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
-            PaperProps={{
-              sx: { width: 420, p: 1, mt: 0.5 }
-            }}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Card sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #eee', borderRadius: 1 }}>
-                <FormControlLabel
-                  control={<Checkbox checked readOnly />}
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>Primary Audience</Typography>
-                      <Typography variant="caption" color="text.secondary">Families with kids over 11</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
-                        {Math.round(minAudience + (maxAudience - minAudience) * (primaryScale / 100)).toLocaleString()}
-                      </Typography>
-                    </Box>
-                  }
+            {/* POI pins */}
+            {tab === 'POI' && mapType === 'POI' && layers.map((layer, lidx) =>
+              layer.type === 'TV region' ? null : layer.pins.map((pin, pidx) => (
+                <RoomIcon
+                  key={lidx + '-' + pidx}
+                  sx={{
+                    color: layer.color,
+                    position: 'absolute',
+                    left: `${pin.x}%`,
+                    top: `${pin.y}%`,
+                    fontSize: 22,
+                    zIndex: 2,
+                    transform: 'translate(-50%, -100%)',
+                    pointerEvents: 'none',
+                    opacity: 0.85,
+                  }}
                 />
-              </Card>
-              {constructionMode !== 'validation' && <>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 0.5 }}>
-                  <ToggleButtonGroup
-                    value={audienceLogic}
-                    exclusive
-                    onChange={(e, v) => v && setAudienceLogic(v)}
-                    size="small"
-                    disabled={selectedAudiences.length < 2}
-                    sx={{ opacity: selectedAudiences.length < 2 ? 0.5 : 1 }}
-                  >
-                    <ToggleButton value="and">AND</ToggleButton>
-                    <ToggleButton value="or">OR</ToggleButton>
-                  </ToggleButtonGroup>
+              ))
+            )}
+            {/* Red hexes for battlegrounds */}
+            {battlegroundCard && redHexes.map((hex, idx) => (
+              <svg
+                key={idx}
+                width={96}
+                height={96}
+                viewBox="0 0 96 96"
+                style={{
+                  position: 'absolute',
+                  left: `${hex.x}%`,
+                  top: `${hex.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 3,
+                  pointerEvents: 'none'
+                }}
+              >
+                <polygon
+                  points="48,12 84,36 84,72 48,96 12,72 12,36"
+                  fill="#E53935"
+                  stroke="#B71C1C"
+                  strokeWidth={4}
+                  opacity={0.45}
+                />
+              </svg>
+            ))}
+            {/* Audience size box top right */}
+            <Box sx={{ position: 'absolute', right: 20, top: 12, bgcolor: '#fff', border: '1px solid #bdbdbd', borderRadius: 1, p: 1.5, minWidth: 200, boxShadow: 1, zIndex: 10 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: 10 }}>Audience Size:</Typography>
+                <Typography variant="body2" fontWeight={700} sx={{ color: 'text.primary', fontSize: 13 }}>{calculateTotalAudience().toLocaleString()}</Typography>
+                <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
+                  <KeyboardArrowDownIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={() => setAnchorEl(null)}
+                PaperProps={{
+                  sx: { width: 420, p: 1, mt: 0.5 }
+                }}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+              >
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Card sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #eee', borderRadius: 1 }}>
+                    <FormControlLabel
+                      control={<Checkbox checked readOnly />}
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>Primary Audience</Typography>
+                          <Typography variant="caption" color="text.secondary">Families with kids over 11</Typography>
+                          <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
+                            {Math.round(minAudience + (maxAudience - minAudience) * (primaryScale / 100)).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </Card>
+                  {constructionMode !== 'validation' && <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 0.5 }}>
+                      <ToggleButtonGroup
+                        value={audienceLogic}
+                        exclusive
+                        onChange={(e, v) => v && setAudienceLogic(v)}
+                        size="small"
+                        disabled={selectedAudiences.length < 2}
+                        sx={{ opacity: selectedAudiences.length < 2 ? 0.5 : 1 }}
+                      >
+                        <ToggleButton value="and">AND</ToggleButton>
+                        <ToggleButton value="or">OR</ToggleButton>
+                      </ToggleButtonGroup>
+                    </Box>
+                    <Card sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #eee', borderRadius: 1 }}>
+                      <FormControlLabel
+                        control={<Checkbox checked={selectedAudiences.includes('secondary')} onChange={(e) => handleAudienceToggle('secondary')} />}
+                        label={
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>Secondary Audience</Typography>
+                            <Typography variant="caption" color="text.secondary">Shopper habits</Typography>
+                            <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
+                              {Math.round(minAudience + (maxAudience - minAudience) * (secondaryScale / 100) * 0.6).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </Card>
+                  </>}
                 </Box>
-                <Card sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #eee', borderRadius: 1 }}>
-                  <FormControlLabel
-                    control={<Checkbox checked={selectedAudiences.includes('secondary')} onChange={(e) => handleAudienceToggle('secondary')} />}
-                    label={
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>Secondary Audience</Typography>
-                        <Typography variant="caption" color="text.secondary">Shopper habits</Typography>
-                        <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>
-                          {Math.round(minAudience + (maxAudience - minAudience) * (secondaryScale / 100) * 0.6).toLocaleString()}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </Card>
-              </>}
+              </Menu>
             </Box>
-          </Menu>
+          </Box>
         </Box>
-      </Box>
+      ) : (
+        <Box sx={{ width: '100%', px: 0, pt: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 18 }}>Top TV Spots</Typography>
+            </Box>
+            <Box>
+              <button
+                style={{
+                  background: '#fff',
+                  color: '#009fe3',
+                  border: '1px solid #009fe3',
+                  borderRadius: 4,
+                  padding: '4px 14px',
+                  fontWeight: 500,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: 'none',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <DownloadIcon sx={{ fontSize: 17, mr: 1 }} /> Export TV plan
+              </button>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 14 }}>
+              These are the TV spots that over-index with your selected audience.
+            </Typography>
+            <Tooltip title={"We combine ACR and panel viewership data to identify TV spots that over-index with your selected audience. To export a CSV of the plan, select the spots you want and click 'Export'."} placement="right" arrow>
+              <InfoOutlinedIcon sx={{ color: '#bdbdbd', fontSize: 18, cursor: 'pointer', mt: 0.1 }} />
+            </Tooltip>
+          </Box>
+          <Box sx={{ width: '100%' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 6, overflow: 'hidden' }}>
+              <thead>
+                <tr style={{ background: '#f7f7fa', fontWeight: 600 }}>
+                  <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', width: 36 }}>
+                    <input type="checkbox" checked={allChecked} onChange={handleSelectAllSpots} style={{ cursor: 'pointer', accentColor: '#009fe3' }} />
+                  </th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Channel</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Programme</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Time Band</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Index</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>Impressions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mockLinearSpots.map((row, idx) => (
+                  <tr key={idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f7f7fa' }}>
+                    <td style={{ padding: '7px 8px', borderBottom: '1px solid #f0f0f0', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSpots.includes(idx)}
+                        onChange={() => handleSelectSpot(idx)}
+                        style={{ cursor: 'pointer', accentColor: '#009fe3' }}
+                      />
+                    </td>
+                    <td style={{ padding: '7px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.channel}</td>
+                    <td style={{ padding: '7px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.programme}</td>
+                    <td style={{ padding: '7px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.timeBand}</td>
+                    <td style={{ padding: '7px 12px', textAlign: 'right', borderBottom: '1px solid #f0f0f0', fontWeight: 600, fontSize: 13 }}>{row.indexScore}</td>
+                    <td style={{ padding: '7px 12px', textAlign: 'right', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>{row.impressions}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Box>
+        </Box>
+      )}
       {/* Define Battleground Dialog */}
       <Dialog
         open={battlegroundDialogOpen}
