@@ -678,11 +678,13 @@ const AudienceStep4 = () => {
             {/* Static image map background changes based on audience selection */}
             <img
               src={
-                selectedAudiences.length === 2
-                  ? (audienceLogic === 'and' ? '/mapsecondary.png' : '/mapboth.png')
-                  : selectedAudiences[0] === 'primary'
-                    ? '/mapprimary.png'
-                    : '/mapsecondary.png'
+                selectedAudiences.length === 0
+                  ? '/blankmap.png'
+                  : selectedAudiences.length === 2
+                    ? (audienceLogic === 'and' ? '/mapsecondary.png' : '/mapboth.png')
+                    : selectedAudiences[0] === 'primary'
+                      ? '/mapprimary.png'
+                      : '/mapsecondary.png'
               }
               alt="Map"
               style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
@@ -759,7 +761,7 @@ const AudienceStep4 = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Card sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #eee', borderRadius: 1 }}>
                     <FormControlLabel
-                      control={<Checkbox checked readOnly />}
+                      control={<Checkbox checked={selectedAudiences.includes('primary')} onChange={(e) => handleAudienceToggle('primary')} />}
                       label={
                         <Box>
                           <Typography variant="body2" fontWeight={600}>Primary Audience</Typography>
